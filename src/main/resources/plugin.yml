@@ -1,0 +1,73 @@
+name: EntityCarry
+version: '1.0.0'
+main: io.papermc.testplugin.TestPlugin
+api-version: '1.20'
+description: A plugin that allows players to carry entities and other players
+author: KernelKraze
+
+commands:
+  carryaccept:
+    description: Accept a carry request from another player
+    usage: "§c用法: /<command>"
+    aliases: [caccept, acceptcarry]
+    permission: entitycarry.be_carried
+    permission-message: "§c你没有权限执行此命令"
+  
+  carryreload:
+    description: Reload the plugin configuration
+    usage: "§c用法: /<command>"
+    aliases: [creload]
+    permission: entitycarry.admin
+    permission-message: "§c你没有权限执行此命令"
+  
+  carrytoggle:
+    description: Toggle whether you can be carried by other players
+    usage: "§c用法: /<command>"
+    aliases: [ctoggle]
+    permission: entitycarry.be_carried
+    permission-message: "§c你没有权限执行此命令"
+
+permissions:
+  entitycarry.*:
+    description: Gives access to all EntityCarry commands and features
+    children:
+      entitycarry.admin: true
+      entitycarry.use: true
+      entitycarry.carry.player: true
+      entitycarry.bypass.cooldown: true
+      entitycarry.entity.*: true
+      entitycarry.type.passive: true
+      entitycarry.type.hostile: true
+      entitycarry.be_carried: true
+  
+  entitycarry.admin:
+    description: Allows reloading the plugin configuration
+    default: op
+  
+  entitycarry.use:
+    description: Allows basic usage of the carry feature
+    default: false
+  
+  entitycarry.carry.player:
+    description: Allows carrying other players
+    default: op
+  
+  entitycarry.bypass.cooldown:
+    description: Bypasses carry cooldown restrictions
+    default: op
+  
+  entitycarry.entity.*:
+    description: Allows carrying all entity types
+    default: op
+  
+  entitycarry.type.passive:
+    description: Allows carrying passive mobs
+    default: false
+  
+  entitycarry.type.hostile:
+    description: Allows carrying hostile mobs
+    default: op
+  
+  entitycarry.be_carried:
+    description: Allows being carried by other players
+    default: false

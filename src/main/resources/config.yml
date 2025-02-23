@@ -1,0 +1,13 @@
+# 基础冷却时间（毫秒）
+cooldown:
+  base: 1000
+  player: 3000
+
+# 搬运模式超时时间（毫秒）
+carry-timeout: 3000
+
+# 禁止搬运的实体列表
+blacklist:
+  - ENDER_DRAGON
+  - WITHER
+  - SHULKER

@@ -1,0 +1,25 @@
+# Gradle files
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# IDE-specific files
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# Compiled files
+*.class
+bin/
+out/
+
+# Logs and databases
+*.log
+*.sqlite
+
+# Local configuration
+local.properties
