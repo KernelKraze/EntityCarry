@@ -1,5 +1,11 @@
 # EntityCarry Plugin Configuration
 # 
+# How to use:
+# 1. Double-sneak (sneak twice quickly) to activate carry mode
+# 2. Right-click on entities to carry them
+# 3. Sneak while carrying to release entities
+# 4. Use /carrytoggle to allow/disallow being carried by others
+
 # Cooldown settings (in milliseconds)
 cooldown:
   # Base cooldown for carrying entities
