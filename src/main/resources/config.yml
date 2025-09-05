@@ -1,0 +1,18 @@
+# EntityCarry Plugin Configuration
+# 
+# Cooldown settings (in milliseconds)
+cooldown:
+  # Base cooldown for carrying entities
+  base: 1000
+  # Extended cooldown for carrying players
+  player: 3000
+
+# How long carry mode stays active (in milliseconds)
+carry-timeout: 3000
+
+# Entities that cannot be carried
+blacklist:
+  - ENDER_DRAGON
+  - WITHER
+  - SHULKER
+  - WARDEN
