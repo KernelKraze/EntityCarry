@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.papermc.entitycarry"
-version = "1.0.0"
+version = "1.0.1"
 description = "A plugin that allows players to carry entities and other players"
 
 repositories {

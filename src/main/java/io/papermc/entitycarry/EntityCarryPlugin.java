@@ -23,6 +23,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -51,7 +52,7 @@ import java.util.logging.Level;
  * - Safe entity placement
  * 
  * @author KernelKraze
- * @version 1.0.0
+ * @version 1.0.1
  */
 public final class EntityCarryPlugin extends JavaPlugin implements Listener {
 
@@ -98,6 +99,9 @@ public final class EntityCarryPlugin extends JavaPlugin implements Listener {
         // Clean shutdown - release all carried entities
         Bukkit.getOnlinePlayers().forEach(this::releasePassengers);
         
+        // Cancel all pending tasks to prevent memory leaks
+        Bukkit.getScheduler().cancelTasks(this);
+        
         // Clear all data structures
         cooldowns.clear();
         carryingStates.clear();
@@ -105,7 +109,7 @@ public final class EntityCarryPlugin extends JavaPlugin implements Listener {
         allowBeCarried.clear();
         lastSneakTime.clear();
         
-        getLogger().info("EntityCarry plugin disabled");
+        getLogger().info("EntityCarry plugin disabled - all data cleared");
     }
 
     @Override
@@ -244,13 +248,18 @@ public final class EntityCarryPlugin extends JavaPlugin implements Listener {
             return;
         }
 
+        // Early permission check to prevent unnecessary processing
+        if (!hasPermission(player, "entitycarry.use")) {
+            return;
+        }
+
         try {
             if (isCarrying(player)) {
                 releasePassengers(player);
                 return;
             }
 
-            // Double-sneak activation to prevent accidental triggering
+            // Double-sneak activation with improved timing and thread safety
             Instant now = Instant.now();
             Instant lastSneak = lastSneakTime.get(playerId);
             
@@ -262,14 +271,39 @@ public final class EntityCarryPlugin extends JavaPlugin implements Listener {
                 // First sneak - record time
                 lastSneakTime.put(playerId, now);
                 
-                // Clear the record after 500ms if no second sneak
+                // Clear the record after 500ms if no second sneak occurred
                 Bukkit.getScheduler().runTaskLater(this, () -> {
-                    lastSneakTime.remove(playerId);
+                    // Remove the entry only if it still contains the same timestamp
+                    // This prevents removing a newer timestamp from a subsequent sneak
+                    Instant storedTime = lastSneakTime.get(playerId);
+                    if (storedTime != null && storedTime.equals(now)) {
+                        lastSneakTime.remove(playerId);
+                    }
                 }, 10L); // 500ms = 10 ticks
             }
         } catch (Exception e) {
-            getLogger().log(Level.WARNING, "Error handling sneak event", e);
+            getLogger().log(Level.WARNING, "Error handling sneak event for player " + player.getName(), e);
         }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        
+        // Clean up all player data to prevent memory leaks
+        cooldowns.remove(playerId);
+        carryingStates.remove(playerId);
+        allowBeCarried.remove(playerId);
+        lastSneakTime.remove(playerId);
+        
+        // Clean up any pending requests involving this player
+        synchronized (pendingRequests) {
+            pendingRequests.remove(playerId);
+            pendingRequests.inverse().remove(playerId);
+        }
+        
+        // Release any passengers this player was carrying
+        releasePassengers(event.getPlayer());
     }
 
     /**
@@ -280,23 +314,40 @@ public final class EntityCarryPlugin extends JavaPlugin implements Listener {
     }
 
     /**
-     * Toggle carry mode with timeout mechanism
+     * Toggle carry mode with timeout mechanism and improved validation
      */
     private void toggleCarryMode(Player player) {
+        UUID playerId = player.getUniqueId();
+        
+        // Permission already checked in sneak handler, this is just defensive
         if (!hasPermission(player, "entitycarry.use")) {
-            sendActionBar(player, "§cNo permission to use this feature");
+            // Don't show message here - permission was already checked earlier
             return;
         }
 
-        if (carryingStates.add(player.getUniqueId())) {
-            sendActionBar(player, "§a§lCarry Mode Activated §7(Right-click entities to carry)");
+        // Check if player is already in carry mode
+        if (carryingStates.contains(playerId)) {
+            // Player is already in carry mode, disable it instead
+            carryingStates.remove(playerId);
+            sendActionBar(player, "§cCarry Mode Deactivated");
+            return;
+        }
+
+        // Activate carry mode
+        if (carryingStates.add(playerId)) {
+            sendActionBar(player, "§aCarry Mode Active §7(Right-click entities to carry)");
             
-            // Schedule timeout task
+            // Schedule timeout task with proper player validation
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                if (carryingStates.remove(player.getUniqueId())) {
-                    sendActionBar(player, "§c§lCarry Mode Timeout");
+                // Only timeout if player is still in carry mode
+                if (carryingStates.remove(playerId)) {
+                    // Check if player is still online before sending message
+                    Player onlinePlayer = Bukkit.getPlayer(playerId);
+                    if (onlinePlayer != null && onlinePlayer.isOnline()) {
+                        sendActionBar(onlinePlayer, "§eCarry Mode Expired");
+                    }
                 }
-            }, carryTimeout.toMillis() / 50); // Convert to ticks
+            }, Math.max(1L, carryTimeout.toMillis() / 50)); // Convert to ticks, minimum 1 tick
         }
     }
 
